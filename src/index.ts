@@ -10,9 +10,20 @@ import { playbackRouter } from './routes/playback.js';
 import { usersRouter } from './routes/users.js';
 
 const PORT = Number(process.env.PORT ?? 3000);
-const MONGODB_URI = process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017/ezlisten';
+const NODE_ENV = process.env.NODE_ENV ?? 'development';
+const MONGODB_URI =
+  process.env.MONGO_URL ??
+  process.env.MONGODB_URL ??
+  process.env.MONGODB_URI ??
+  (NODE_ENV === 'production' ? undefined : 'mongodb://localhost:27017/ezlisten');
 
 async function main() {
+  if (!MONGODB_URI) {
+    throw new Error(
+      'MongoDB connection string not found. Please set MONGO_URL, MONGODB_URL, or MONGODB_URI.',
+    );
+  }
+
   await mongoose.connect(MONGODB_URI);
 
   const app = express();

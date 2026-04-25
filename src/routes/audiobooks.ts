@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import multer from 'multer';
 import { randomUUID } from 'node:crypto';
+import { isValidObjectId } from 'mongoose';
 
 import type { AuthedRequest } from '../middleware/auth.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -12,8 +13,7 @@ import { TranscriptSegment } from '../models/TranscriptSegment.js';
 import { UserPlaybackState } from '../models/UserPlaybackState.js';
 import { runMockPipeline } from '../services/mockPipeline.js';
 
-const PUBLIC_BASE =
-  process.env.PUBLIC_BASE_URL?.replace(/\/$/, '') ?? 'http://localhost:3000';
+const CONFIGURED_PUBLIC_BASE = process.env.PUBLIC_BASE_URL?.replace(/\/$/, '');
 
 const uploadRoot = path.join(process.cwd(), 'uploads');
 const incomingDir = path.join(uploadRoot, 'incoming');
@@ -25,9 +25,21 @@ function ensureDirs() {
   }
 }
 
+function getPublicBaseUrl(req: AuthedRequest): string {
+  if (CONFIGURED_PUBLIC_BASE) return CONFIGURED_PUBLIC_BASE;
+  const host = req.get('host') ?? 'localhost:3000';
+  return `${req.protocol}://${host}`;
+}
+
 ensureDirs();
 
 const upload = multer({ dest: incomingDir });
+
+function rejectInvalidAudiobookId(id: string, res: { status: (code: number) => { json: (body: unknown) => void } }) {
+  if (isValidObjectId(id)) return false;
+  res.status(404).json({ message: 'Not found' });
+  return true;
+}
 
 export const audiobooksRouter = Router();
 
@@ -66,7 +78,7 @@ audiobooksRouter.post(
       const localName = `${randomUUID()}${ext}`;
       const dest = path.join(filesDir, localName);
       fs.renameSync(req.file.path, dest);
-      const audioFileUrl = `${PUBLIC_BASE}/files/${localName}`;
+      const audioFileUrl = `${getPublicBaseUrl(req)}/files/${localName}`;
       const book = await Audiobook.create({
         userId: req.userId,
         title,
@@ -96,6 +108,8 @@ audiobooksRouter.post(
 );
 
 audiobooksRouter.get('/:id', async (req: AuthedRequest, res) => {
+  if (rejectInvalidAudiobookId(req.params.id, res)) return;
+
   const book = await Audiobook.findOne({
     _id: req.params.id,
     userId: req.userId,
@@ -117,6 +131,8 @@ audiobooksRouter.get('/:id', async (req: AuthedRequest, res) => {
 });
 
 audiobooksRouter.delete('/:id', async (req: AuthedRequest, res) => {
+  if (rejectInvalidAudiobookId(req.params.id, res)) return;
+
   const book = await Audiobook.findOne({
     _id: req.params.id,
     userId: req.userId,
@@ -139,6 +155,8 @@ audiobooksRouter.delete('/:id', async (req: AuthedRequest, res) => {
 });
 
 audiobooksRouter.get('/:id/transcript', async (req: AuthedRequest, res) => {
+  if (rejectInvalidAudiobookId(req.params.id, res)) return;
+
   const book = await Audiobook.findOne({
     _id: req.params.id,
     userId: req.userId,
@@ -162,6 +180,8 @@ audiobooksRouter.get('/:id/transcript', async (req: AuthedRequest, res) => {
 });
 
 audiobooksRouter.get('/:id/filter-tags', async (req: AuthedRequest, res) => {
+  if (rejectInvalidAudiobookId(req.params.id, res)) return;
+
   const book = await Audiobook.findOne({
     _id: req.params.id,
     userId: req.userId,

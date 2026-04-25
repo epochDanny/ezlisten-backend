@@ -4,7 +4,7 @@ import { Audiobook } from '../models/Audiobook.js';
 import { FilterTag } from '../models/FilterTag.js';
 import { TranscriptSegment } from '../models/TranscriptSegment.js';
 
-/** MVP stand-in for Whisper + classifier: seeds transcript + filter tags (~15s demo timeline). */
+/** MVP stand-in for Whisper + classifier: seeds transcript + filter tags. */
 export async function runMockPipeline(audiobookId: string): Promise<void> {
   const id = new mongoose.Types.ObjectId(audiobookId);
   await TranscriptSegment.deleteMany({ audiobookId: id });
@@ -14,12 +14,12 @@ export async function runMockPipeline(audiobookId: string): Promise<void> {
     {
       audiobookId: id,
       startMs: 0,
-      endMs: 3000,
-      text: '[Intro — illustrative transcript segment]',
+      endMs: 1200,
+      text: '[Test profanity cue]',
     },
     {
       audiobookId: id,
-      startMs: 3000,
+      startMs: 1200,
       endMs: 8000,
       text: '[Body — illustrative transcript segment]',
     },
@@ -35,11 +35,11 @@ export async function runMockPipeline(audiobookId: string): Promise<void> {
     {
       audiobookId: id,
       category: 'profanity',
-      action: 'skip',
+      action: 'bleep',
       severity: 2,
-      startMs: 3000,
-      endMs: 5000,
-      originalText: '[illustrative]',
+      startMs: 0,
+      endMs: 1200,
+      originalText: 'damn',
     },
     {
       audiobookId: id,

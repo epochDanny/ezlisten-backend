@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { isValidObjectId } from 'mongoose';
 
 import type { AuthedRequest } from '../middleware/auth.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -10,6 +11,11 @@ export const playbackRouter = Router();
 playbackRouter.use(requireAuth);
 
 playbackRouter.get('/:audiobookId', async (req: AuthedRequest, res) => {
+  if (!isValidObjectId(req.params.audiobookId)) {
+    res.status(404).json({ message: 'Not found' });
+    return;
+  }
+
   const book = await Audiobook.findOne({
     _id: req.params.audiobookId,
     userId: req.userId,
@@ -42,6 +48,11 @@ playbackRouter.get('/:audiobookId', async (req: AuthedRequest, res) => {
 });
 
 playbackRouter.put('/:audiobookId', async (req: AuthedRequest, res) => {
+  if (!isValidObjectId(req.params.audiobookId)) {
+    res.status(404).json({ message: 'Not found' });
+    return;
+  }
+
   const book = await Audiobook.findOne({
     _id: req.params.audiobookId,
     userId: req.userId,
